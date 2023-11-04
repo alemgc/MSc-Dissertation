@@ -1,21 +1,24 @@
-              #####################################################
-              
-              #       METAL PRODUCTION IN PERU 2008-2019          #
-              
-              #####################################################
+#####################################################
+
+#       METAL PRODUCTION IN PERU 2008-2019          #
+
+#####################################################
 
 # In this script I systematize the mining production information. 
 # The aim is to build a dataset that contains the annual production in USD of the main matals in Peru between 2008 and 2019, 
 # which are iron, copper, lead, tin, zinc, gold and silver. 
+# I want to keep the information at a district level. 
 
 # Load the necessary libraries
 
+install.packages("openxlsx")
+library('openxlsx')
 library('readxl')
 library('haven')
 
 # Set the directory
-              
-data_dir <- "/Users/alejandramontoya/Library/CloudStorage/GoogleDrive-montoya.a@pucp.edu.pe/Mi unidad/MSc Development Studies and Policy - Manchester/Dissertation/Data"
+
+data_dir <- "/Users/alejandramontoya/Documents/Dissertation/Data preprocessing"
 
 #################################
 ## 1. METALS - COMPILED DATASETS
@@ -48,20 +51,22 @@ numeric_var <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept",
 # 1) metals in 2008
 
 variable_names_2008 <- list()
- 
+
 for (metal in metals2008) {
   
-  var_name <- paste(metal,"2008", sep = "")
-  file_path <- file.path(data_dir, "MINING", "2008", paste0(metal, ".XLS"))
-  data <- readxl::read_excel(file_path)
-  colnames(data) <- column_names
-  data <- subset(data, grepl("Oro|Plata|%", Ley))
-  data$year <- 2008
-  data[numeric_var] <- lapply(data[numeric_var], as.numeric)
-  assign(var_name,data)
-  variable_names_2008 <- c(variable_names_2008,var_name)
+  var_name <- paste(metal,"2008", sep = "") # Generation of the variable name (string) that I am going to assign to each metal-year data frame
+  file_path <- file.path(data_dir, "2008", paste0(metal, ".XLS")) # Import of the excel file
+  data <- readxl::read_excel(file_path) # reading the data in the excel file
+  colnames(data) <- column_names # I assign the column names to the columns in the data frame
+  data <- subset(data, grepl("Oro|Plata|%", Ley)) # Clean the data
+  data$year <- 2008 # create the year variable
+  data[numeric_var] <- lapply(data[numeric_var], as.numeric) # Transform to numeric the numeric variables
+  assign(var_name,data) # I assign the created name to the data to save it in the memory
+  variable_names_2008 <- c(variable_names_2008,var_name) # I save the names (strings) of the data frames created in this loop to be able to call the data later
   
 }
+
+# I repeat this process for each group of years
 
 # 2) metals in 2009-2010
 
@@ -73,7 +78,7 @@ for (j in years) {
   for (metal in metals2009_2015) {
     
     var_name <- paste(metal, j, sep = "")
-    file_path <- file.path(data_dir, "MINING", j, paste0(metal, ".XLS"))
+    file_path <- file.path(data_dir, j, paste0(metal, ".XLS"))
     data <- readxl::read_excel(file_path)
     colnames(data) <- column_names
     data <- subset(data, grepl("Oro|Plata|%", Ley))
@@ -96,7 +101,7 @@ for (j in years) {
   for (metal in metals2009_2015) {
     
     var_name <- paste(metal, j, sep = "")
-    file_path <- file.path(data_dir, "MINING", j, paste0(metal, ".xlsx"))
+    file_path <- file.path(data_dir, j, paste0(metal, ".xlsx"))
     data <- readxl::read_excel(file_path)
     colnames(data) <- column_names
     data <- subset(data, grepl("Oro|Plata|%", Ley))
@@ -119,7 +124,7 @@ for (j in years) {
   for (metal in metals2016_2017) {
     
     var_name <- paste(metal, j, sep = "")
-    file_path <- file.path(data_dir, "MINING", j, paste0(metal, ".xlsx"))
+    file_path <- file.path(data_dir, j, paste0(metal, ".xlsx"))
     data <- readxl::read_excel(file_path)
     colnames(data) <- column_names
     data <- subset(data, grepl("Oro|Plata|%", Ley))
@@ -142,7 +147,7 @@ for (j in years) {
   for (metal in metals2018_2019) {
     
     var_name <- paste(metal, j, sep = "")
-    file_path <- file.path(data_dir, "MINING", j, paste0(metal, ".xlsx"))
+    file_path <- file.path(data_dir, j, paste0(metal, ".xlsx"))
     data <- readxl::read_excel(file_path)
     colnames(data) <- column_names
     data <- subset(data, grepl("Oro|Plata|%", Ley))
@@ -204,35 +209,41 @@ for (var_name in variable_names_2018_2019) {
 ## Append the whole
 
 metals_data <- rbind(data_2008, data_2009_2015, data_2016_2017, data_2018_2019)
-saveRDS(compilado_metales, file.path(data_dir, "MINING", "COMPILADO", paste0("METALS_PERU.rds")))
+write.xlsx(metals_data, file.path(data_dir, "compilado_metales.xlsx"), rowNames = FALSE)
 
 #####################
-# 2. PRICES
+# 2. PRICES IN USD
 #####################
 
-prices_excel <- "/Users/alejandramontoya/Library/CloudStorage/GoogleDrive-montoya.a@pucp.edu.pe/Mi unidad/MSc Development Studies and Policy - Manchester/Dissertation/Data/CMO-Historical-Data-Annual.xlsx"
+# In this section, I import the metal prices excel file obtained from the World Bank Data and clean it
+
+prices_excel <- file.path(data_dir, "CMO-Historical-Data-Annual.xlsx")
 prices_data <- read_excel(prices_excel, sheet = "Annual Prices (Real)", range = "A9:BW86")
 colnames(prices_data)[colnames(prices_data) == "...1"] <- "year"
-prices_data <- subset(prices_data, select = -c(year, KIRON_ORE, KCOPPER, KLEAD, KTin, KZinc, KGOLD, KSILVER))
-prices_data <- subset(prices_data, !is.na(year))
+prices_data <- subset(prices_data, select = c(year, KIRON_ORE, KCOPPER, KLEAD, KTin, KZinc, KGOLD, KSILVER)) # Keep only the prices of the metals of interest, each column registers a metal
+prices_data <- subset(prices_data, !is.na(year)) 
 
-prices_data$KGOLD_gr <- prices_data$KGOLD / 31.1034768
-prices_data$KSILVER_kg <- prices_data$KSILVER / 0.03110348
+prices_data$KGOLD_gr <- prices_data$KGOLD / 31.1034768 # The price for gold is registered in oz t, so I calculate the equivalent for grams, 
+# which is the measurement in which the gold production in Peru is presented 
+prices_data$KSILVER_kg <- prices_data$KSILVER / 0.03110348 # The price for silver is registered in oz t, so I calculate the equivalent for kilograms, 
+# which is the measurement in which the silver production in Peru is presented 
 
 #################################
 # 3. PRODUCTION (QUANT) + PRICES
 #################################
 
-library(dplyr)
+library(dplyr) 
 
+# I call the data frame created in the first section and keep only the annual information by district
 metals_data <- subset(metals_data, select = -c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sept, Oct, Nov, Dec))
 colnames(metals_data)[colnames(metals_data) == "Ley"] <- "Product"
 metals_clean <- aggregate(Total ~ Region + Province + District + Product + year, metals_data, sum)
 
-# Merge the data frames by the 'year' variable
+# Merge the data frames by year
 metal_production <- merge(metals_clean, prices_data, by = "year", all.x = TRUE)
-metal_production <- filter(metal_production, !is.na(Region)) 
+metal_production <- filter(metal_production, !is.na(Region)) # drop the observations in the prices data that did not match
 
+#Generate the total metal production per year-district-metal
 metal_production <- metal_production %>%
   mutate(TotalProdUSD = case_when(
     Product == "%Hierro" ~ Total * KIRON_ORE,
@@ -245,9 +256,33 @@ metal_production <- metal_production %>%
     TRUE ~ NA_real_ 
   ))
 
+# Replace special characters in Region, Province, and District columns
+
+special_chars <- c("Á", "É", "Í", "Ó", "Ú", "á", "é", "í", "ó", "ú", "à", "è", "ì", "ò", "ù")
+normal_chars <- c("A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "a", "e", "i", "o", "u")
+
+for (i in 1:length(special_chars)) {
+  metal_production$Region <- gsub(special_chars[i], normal_chars[i], metal_production$Region)
+  metal_production$Province <- gsub(special_chars[i], normal_chars[i], metal_production$Province)
+  metal_production$District <- gsub(special_chars[i], normal_chars[i], metal_production$District)
+}
+
+# Convert Region, Province, and District columns to uppercase
+metal_production$Region <- toupper(metal_production$Region)
+metal_production$Province <- toupper(metal_production$Province)
+metal_production$District <- toupper(metal_production$District)
+
+# Remove whitespace from Region, Province, and District columns
+metal_production$Region <- trimws(metal_production$Region)
+metal_production$Province <- trimws(metal_production$Province)
+metal_production$District <- trimws(metal_production$District)
+
+# Drop if TotalProdUSD contains missing values
 metal_production <- filter(metal_production, !is.na(TotalProdUSD)) 
 
+# Collapse total metal production by year-district
+metals_prod_clean <- aggregate(Total ~ Region + Province + District + year, metal_production, sum)
 
-
-
+# Write the data frame to Excel
+write.xlsx(metals_prod_clean, file.path(data_dir, "Metal_production_clean.xlsx"), rowNames = FALSE)
 
